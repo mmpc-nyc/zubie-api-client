@@ -70,9 +70,54 @@ class RestAdapter(object):
         resource = 'vehicles/nearby'
         return self.get(resource, lat, long, cursor, size)
 
-    def get_trips(self, user_key=None, vehicle_key=None, started_after=None, started_before=None, tag_keys=None, cursor=None, size=None, expand=None) -> dict:
+    def get_trips(self, user_key=None, vehicle_key=None, started_after=None, started_before=None, tag_keys=None,
+                  cursor=None, size=None, expand=None) -> dict:
+        """Get a list of trips for the account. A trip is the logical grouping of all points that are recorded from
+        the time the vehicle’s engine is started to the time the engine is turned off. :param user_key: Filter
+        results to visits to a single driver. Optional. :type user_key: str :param vehicle_key: Filter results to a
+        single vehicle. Optional. :type vehicle_key: str :param started_after: Filter results to only include trips
+        that started on or after this timestamp. ISO8601 format (if no offset provided, assumed UTC). Optional. :type
+        started_after: str :param started_before: Filter results to only include trips that started on or before this
+        timestamp. ISO8601 format (if no offset provided, assumed UTC). Optional. :type started_before: str :param
+        tag_keys: Restrict results to include only vehicles with these tag keys. Multiple tag values may be provided.
+        Takes precedence over tags query param if both provided. :type tag_keys: str :param cursor: The cursor string
+        used for pagination, signifying the object ID where to start the results. :type cursor: str :param size: The
+        number of results to return per call. Default 10 if not provided. :type size: str :param expand: Default: [
+        "user","vehicle","tags"] Items Enum:"user" "vehicle" "tags" Optional list of expanded properties to include
+        in results :type expand: str
+        """
         resource = 'trips'
-        return self.get(user_key, vehicle_key, started_after, started_before, tag_keys, cursor, size, expand)
+        return self.get(resource, user_key, vehicle_key, started_after, started_before, tag_keys, cursor, size, expand)
+
+    def get_trip(self, trip_key : str) -> dict:
+        """Get the details for a single trip."""
+        resource = 'trip/{%s}' % trip_key
+        return self.get(resource)
+
+    def get_trip_points(self, trip_key: str, cursor=None, size=None) -> dict:
+        """Get the detailed GPS points and event details for a given trip.
+        :param trip_key: Key for individual trip.
+        :param cursor: The cursor string used for pagination, signifying the object ID where to start the results.
+        :type cursor: str
+        :param size: The number of results to return per call. Default 200 if not provided
+        :type size: str
+        """
+        resource = 'trip/{%s}/points' % trip_key
+        return self.get(resource, cursor, size)
+
+    def get_visits(self, driver_key=None, vehicle_key=None, place_key=None, entry_after=None, entry_before=None, cursor=None, size=None) -> dict:
+        """Get a a list of visits to all places for a given driver, vehicle or place. A visit begins at the trip
+        point a car enters a geofence, and ends at the point they exit. :param driver_key: Filter results to visits
+        to a single driver. Optional. :type driver_key: str :param vehicle_key: Filter results to a single vehicle.
+        Optional. :type vehicle_key: str :param place_key: Filter results to a single place. Optional. :type
+        place_key: str :param entry_after: Filter results to only include visits that started after this timestamp.
+        Optional. :type entry_after: str :param entry_before: Filter results to only include visits that started
+        before this timestamp. Optional. :type entry_before: str :param cursor: The cursor string used for
+        pagination, signifying the object ID where to start the results. :type cursor: str :param size: The number of
+        results to return per call. Default 10 if not provided. :type size: str
+        """
+
+        return self.get(driver_key, vehicle_key, place_key, entry_after, entry_before, cursor, size)
 
 
 if __name__ == '__main__':
@@ -80,3 +125,4 @@ if __name__ == '__main__':
     devices = RA.get_devices()
     groups = RA.get_groups()
     vehicles = RA.get_vehicles()
+    trips = RA.get_trips()
