@@ -1,3 +1,6 @@
+from collections import Generator
+from typing import Any
+
 import requests
 import os
 from urllib.parse import urljoin
@@ -24,6 +27,14 @@ class RestAdapter(object):
         url = urljoin(self.base_url, resource)
         return json.loads(requests.get(url=url, headers=self._headers, params=params).text)
 
+    def get_pages(self, *args, **kwargs):
+        """Get function for getting pagination data"""
+        cursor = kwargs.get('cursor')  # Cursor should be set to none initially
+        while cursor is not False:
+            result = self.get(*args, **kwargs)
+            cursor = result.get('cursor', False)
+            yield result
+
     def get_devices(self, q=None) -> dict:
         """Lists all active and pending devices (vehicle connected hardware) in account."""
         resource = 'devices'
@@ -40,7 +51,8 @@ class RestAdapter(object):
         resource = 'groups'
         return self.get(resource, group_keys=group_keys, show_inactive=show_inactive)
 
-    def get_vehicles(self, q=None, tag_keys=None, group_keys=None, cursor=None, size=None, expand=None) -> dict:
+    def get_vehicles(self, q=None, tag_keys=None, group_keys=None, cursor=None, size=None, expand=None) -> Generator[
+        dict, Any, None]:
         """Lists Vehicles in account. Restricted based on API user's group permissions. :param q: Search vehicles by
         nickname or full VIN. :type q: str :param tag_keys: Restrict results to include only vehicles with these tag
         keys. Multiple tag values may be provided, treated as an OR in filter. :type tag_keys: str :param group_keys:
@@ -51,14 +63,15 @@ class RestAdapter(object):
         Optional list of expanded properties to include in results :type expand: str
         """
         resource = 'vehicles'
-        return self.get(resource, q, tag_keys, group_keys, cursor, size, expand)
+        return self.get_pages(resource, q=q, tag_keys=tag_keys, group_keys=group_keys, cursor=cursor, size=size,
+                              expand=expand)
 
     def get_vehicle(self, vehicle_key: str) -> dict:
         """Retrieve a single vehicle by vehicle key"""
         resource = 'vehicle/{%s}' % vehicle_key
         return self.get(resource)
 
-    def get_nearby_vehicles(self, lat: str, long: str, cursor=None, size=None) -> dict:
+    def get_nearby_vehicles(self, lat: str, long: str, cursor=None, size=None) -> Generator[dict, Any, None]:
         """Get list of nearby vehicles, using a given GPS point. Restricted based on API user's group permissions.
         :param lat: Latitude of the point.
         :param long: Longitude of the point.
@@ -68,10 +81,10 @@ class RestAdapter(object):
         :type size: str
         """
         resource = 'vehicles/nearby'
-        return self.get(resource, lat, long, cursor, size)
+        return self.get_pages(resource, lat=lat, long=long, cursor=cursor, size=size)
 
     def get_trips(self, user_key=None, vehicle_key=None, started_after=None, started_before=None, tag_keys=None,
-                  cursor=None, size=None, expand=None) -> dict:
+                  cursor=None, size=None, expand=None) -> Generator[dict, Any, None]:
         """Get a list of trips for the account. A trip is the logical grouping of all points that are recorded from
         the time the vehicle’s engine is started to the time the engine is turned off. :param user_key: Filter
         results to visits to a single driver. Optional. :type user_key: str :param vehicle_key: Filter results to a
@@ -87,14 +100,15 @@ class RestAdapter(object):
         in results :type expand: str
         """
         resource = 'trips'
-        return self.get(resource, user_key, vehicle_key, started_after, started_before, tag_keys, cursor, size, expand)
+        return self.get_pages(resource, user_key=user_key, vehicle_ke=vehicle_key, started_after=started_after,
+                              started_before=started_before, tag_keys=tag_keys, cursor=cursor, size=size, expand=expand)
 
-    def get_trip(self, trip_key : str) -> dict:
+    def get_trip(self, trip_key: str) -> dict:
         """Get the details for a single trip."""
         resource = 'trip/{%s}' % trip_key
         return self.get(resource)
 
-    def get_trip_points(self, trip_key: str, cursor=None, size=None) -> dict:
+    def get_trip_points(self, trip_key: str, cursor=None, size=None) -> Generator[dict, Any, None]:
         """Get the detailed GPS points and event details for a given trip.
         :param trip_key: Key for individual trip.
         :param cursor: The cursor string used for pagination, signifying the object ID where to start the results.
@@ -103,9 +117,10 @@ class RestAdapter(object):
         :type size: str
         """
         resource = 'trip/{%s}/points' % trip_key
-        return self.get(resource, cursor, size)
+        return self.get_pages(resource, cursor=cursor, size=size)
 
-    def get_visits(self, driver_key=None, vehicle_key=None, place_key=None, entry_after=None, entry_before=None, cursor=None, size=None) -> dict:
+    def get_visits(self, driver_key=None, vehicle_key=None, place_key=None, entry_after=None, entry_before=None,
+                   cursor=None, size=None) -> Generator[dict, Any, None]:
         """Get a a list of visits to all places for a given driver, vehicle or place. A visit begins at the trip
         point a car enters a geofence, and ends at the point they exit. :param driver_key: Filter results to visits
         to a single driver. Optional. :type driver_key: str :param vehicle_key: Filter results to a single vehicle.
@@ -117,7 +132,8 @@ class RestAdapter(object):
         results to return per call. Default 10 if not provided. :type size: str
         """
 
-        return self.get(driver_key, vehicle_key, place_key, entry_after, entry_before, cursor, size)
+        return self.get_pages(driver_key=driver_key, vehicle_key=vehicle_key, place_key=place_key,
+                              entry_after=entry_after, entry_before=entry_before, cursor=cursor, size=size)
 
 
 if __name__ == '__main__':
