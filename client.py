@@ -1,16 +1,15 @@
 from collections import Generator
-from typing import Any
-
+from pytz import timezone
 import requests
 import os
 from urllib.parse import urljoin
-import json
 
 API_KEY = os.environ.get('ZUBIE_API_KEY', None)
 CLIENT_ID = os.environ.get('ZUBIE_CLIENT_ID', None)
+TZ = timezone('America/New_York')
 
 
-class RestAdapter(object):
+class RestAdapter:
     """Adapter for communicating with Zubie API"""
 
     def __init__(self, api_key=API_KEY, client_id=CLIENT_ID):
@@ -20,36 +19,36 @@ class RestAdapter(object):
         self._headers = {'Zubie-Api-Key': api_key}
         self._params = {'client_id': client_id}
 
-    def get(self, resource: str, *args, **kwargs) -> dict:
+    def _get(self, resource: str, **kwargs) -> dict:
         """Base get method used for all api calls"""
         params = self._params.copy()  # Sets default parameters
         params.update(kwargs)  # Adds provided keyword arguments to the call
         url = urljoin(self.base_url, resource)
-        return json.loads(requests.get(url=url, headers=self._headers, params=params).text)
+        return requests.get(url=url, headers=self._headers, params=params).json()
 
-    def get_pages(self, *args, **kwargs):
+    def _get_pages(self, *args, **kwargs):
         """Get function for getting pagination data"""
         cursor = kwargs.get('cursor')  # Cursor should be set to none initially
         while cursor is not False:
-            result = self.get(*args, **kwargs)
+            result = self._get(*args, **kwargs)
             cursor = result.get('cursor', False)
             yield result
 
     def get_devices(self, q=None) -> dict:
         """Lists all active and pending devices (vehicle connected hardware) in account."""
         resource = 'devices'
-        return self.get(resource, q=q)
+        return self._get(resource, q=q)
 
     def get_device(self, key: str) -> dict:
         """Get single device by key"""
-        resource = 'device/{%s}' % key
-        return self.get(resource)
+        resource = f'device/{{key}}'
+        return self._get(resource, key=key)
 
     def get_groups(self, group_keys=None, show_inactive=False) -> dict:
         """Lists groups available in the account, based on the group permissions of the user.
         Groups are a way to provide hierarchical structure to account vehicles and restrict user permissions."""
         resource = 'groups'
-        return self.get(resource, group_keys=group_keys, show_inactive=show_inactive)
+        return self._get(resource, group_keys=group_keys, show_inactive=show_inactive)
 
     def get_vehicles(self, q=None, tag_keys=None, group_keys=None, cursor=None, size=None, expand=None) -> Generator:
         """Lists Vehicles in account. Restricted based on API user's group permissions. :param q: Search vehicles by
@@ -62,13 +61,13 @@ class RestAdapter(object):
         Optional list of expanded properties to include in results :type expand: str
         """
         resource = 'vehicles'
-        return self.get_pages(resource, q=q, tag_keys=tag_keys, group_keys=group_keys, cursor=cursor, size=size,
-                              expand=expand)
+        return self._get_pages(resource, q=q, tag_keys=tag_keys, group_keys=group_keys, cursor=cursor, size=size,
+                               expand=expand)
 
     def get_vehicle(self, vehicle_key: str) -> dict:
         """Retrieve a single vehicle by vehicle key"""
-        resource = 'vehicle/{%s}' % vehicle_key
-        return self.get(resource)
+        resource = f'vehicle/{{vehicle_key}}'
+        return self._get(resource, vehicle_key=vehicle_key)
 
     def get_nearby_vehicles(self, lat: str, long: str, cursor=None, size=None) -> Generator:
         """Get list of nearby vehicles, using a given GPS point. Restricted based on API user's group permissions.
@@ -80,7 +79,7 @@ class RestAdapter(object):
         :type size: str
         """
         resource = 'vehicles/nearby'
-        return self.get_pages(resource, lat=lat, long=long, cursor=cursor, size=size)
+        return self._get_pages(resource, lat=lat, long=long, cursor=cursor, size=size)
 
     def get_trips(self, user_key=None, vehicle_key=None, started_after=None, started_before=None, tag_keys=None,
                   cursor=None, size=None, expand=None) -> Generator:
@@ -99,13 +98,14 @@ class RestAdapter(object):
         in results :type expand: str
         """
         resource = 'trips'
-        return self.get_pages(resource, user_key=user_key, vehicle_ke=vehicle_key, started_after=started_after,
-                              started_before=started_before, tag_keys=tag_keys, cursor=cursor, size=size, expand=expand)
+        return self._get_pages(resource, user_key=user_key, vehicle_ke=vehicle_key, started_after=started_after,
+                               started_before=started_before, tag_keys=tag_keys, cursor=cursor, size=size,
+                               expand=expand)
 
     def get_trip(self, trip_key: str) -> dict:
         """Get the details for a single trip."""
-        resource = 'trip/{%s}' % trip_key
-        return self.get(resource)
+        resource = f'trip/{{trip_key}}'
+        return self._get(resource, trip_key=trip_key)
 
     def get_trip_points(self, trip_key: str, cursor=None, size=None) -> Generator:
         """Get the detailed GPS points and event details for a given trip.
@@ -115,8 +115,8 @@ class RestAdapter(object):
         :param size: The number of results to return per call. Default 200 if not provided
         :type size: str
         """
-        resource = 'trip/{%s}/points' % trip_key
-        return self.get_pages(resource, cursor=cursor, size=size)
+        resource = f'trip/{{trip_key}}/points'
+        return self._get_pages(resource, trip_key=trip_key, cursor=cursor, size=size)
 
     def get_visits(self, driver_key=None, vehicle_key=None, place_key=None, entry_after=None, entry_before=None,
                    cursor=None, size=None) -> Generator:
@@ -130,8 +130,8 @@ class RestAdapter(object):
         pagination, signifying the object ID where to start the results. :type cursor: str :param size: The number of
         results to return per call. Default 10 if not provided. :type size: str
         """
-        return self.get_pages(driver_key=driver_key, vehicle_key=vehicle_key, place_key=place_key,
-                              entry_after=entry_after, entry_before=entry_before, cursor=cursor, size=size)
+        return self._get_pages(driver_key=driver_key, vehicle_key=vehicle_key, place_key=place_key,
+                               entry_after=entry_after, entry_before=entry_before, cursor=cursor, size=size)
 
 
 if __name__ == '__main__':
