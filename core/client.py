@@ -39,7 +39,7 @@ class RestClientV2(Client):
     headers: dict = {'Zubie-Api-Key': API_KEY}
     params: dict = {'client_id': CLIENT_ID}
 
-    def get(self, resource: str, **kwargs):
+    def get(self, resource: str, **kwargs) -> dict:
         params = self.params.copy()
         params.update(**kwargs)
         url = urljoin(self.BASE_URL, resource)
