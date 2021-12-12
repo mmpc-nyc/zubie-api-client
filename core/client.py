@@ -1,12 +1,9 @@
 from collections import Generator
-from pytz import timezone
-import requests
 import os
 from urllib.parse import urljoin
 
 API_KEY = os.environ.get('ZUBIE_API_KEY', None)
 CLIENT_ID = os.environ.get('ZUBIE_CLIENT_ID', None)
-TZ = timezone('America/New_York')
 
 
 class RestAdapter:
