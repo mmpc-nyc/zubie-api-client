@@ -1,21 +1,21 @@
 from unittest import TestCase
 
-from core.adapter import RestAdapterV2
+from core.client import RestClientV2
 
 
 class TestRestAdapterV2(TestCase):
 
     def setUp(self) -> None:
-        self.adapter = RestAdapterV2()
+        self.client = RestClientV2()
 
     def test_get(self):
-        self.adapter.get()
+        self.client.get('devices')
 
     def test_post(self):
-        self.adapter.post()
+        self.client.post()
 
     def test_put(self):
-        self.adapter.put()
+        self.client.put()
 
     def test_delete(self):
-        self.adapter.delete()
+        self.client.delete()
